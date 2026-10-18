@@ -1,5 +1,6 @@
 package tn.esprit.tic.cce.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,10 +23,10 @@ public class Agence {
     private String ville;
     private String adresse;
     private String telephone;
-
+    @JsonIgnore
     @OneToMany(mappedBy = "agence")
     private List<Employe> employes = new ArrayList<>();
-
+    @JsonIgnore
     @OneToMany(mappedBy = "agence")
     private List<Vehicule> vehicules = new ArrayList<>();
 }

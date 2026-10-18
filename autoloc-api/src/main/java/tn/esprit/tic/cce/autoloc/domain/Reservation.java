@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 
 @Entity
@@ -30,7 +30,7 @@ public class Reservation {
     @ManyToOne
     @JoinColumn(name = "id_client")
     private Client client;
-
+    @JsonIgnore
     @OneToOne(mappedBy = "reservation")
     private Contrat contrat;
 }
