@@ -8,11 +8,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import tn.esprit.tic.cce.autoloc.domain.Client;
+import tn.esprit.tic.cce.autoloc.config.ApiDocs;
+import tn.esprit.tic.cce.autoloc.dto.ClientRequestDTO;
+import tn.esprit.tic.cce.autoloc.dto.ClientResponseDTO;
 import tn.esprit.tic.cce.autoloc.service.IClientService;
 
 import java.util.List;
@@ -20,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/clients")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Clients", description = "Gestion des clients d'AutoLoc")
 public class ClientController {
 
@@ -28,87 +33,82 @@ public class ClientController {
     @Operation(summary = "Lister les clients",
             description = "Retourne la liste complète des clients (liste vide si aucun).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Liste retournée avec succès",
-                    content = @Content(mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = Client.class))))
+            @ApiResponse(responseCode = "200", description = ApiDocs.LISTE_OK,
+                    content = @Content(mediaType = ApiDocs.JSON,
+                            array = @ArraySchema(schema = @Schema(implementation = ClientResponseDTO.class))))
     })
     @GetMapping
-    public List<Client> retrieveAllClients() {
+    public List<ClientResponseDTO> retrieveAllClients() {
         return clientService.retrieveAllClients();
     }
 
     @Operation(summary = "Consulter un client par son identifiant",
-            description = "Retourne un client correspondant à l'identifiant fourni.")
+            description = "Retourne le client correspondant à l'identifiant fourni.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Élément trouvé",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Client.class))),
-            @ApiResponse(responseCode = "404", description = "Aucun élément avec cet identifiant",
-                    content = @Content)
+            @ApiResponse(responseCode = "200", description = ApiDocs.TROUVE,
+                    content = @Content(mediaType = ApiDocs.JSON,
+                            schema = @Schema(implementation = ClientResponseDTO.class))),
+            @ApiResponse(responseCode = "404", description = ApiDocs.NON_TROUVE, content = @Content)
     })
     @GetMapping("/{idClient}")
-    public ResponseEntity<Client> retrieveClient(
-            @Parameter(description = "Identifiant d'un client", example = "1") @PathVariable Long idClient) {
-        Client client = clientService.retrieveClient(idClient);
-        return client != null ? ResponseEntity.ok(client) : ResponseEntity.notFound().build();
+    public ClientResponseDTO retrieveClient(
+            @Parameter(description = ApiDocs.ID_CLIENT, example = "1") @PathVariable Long idClient) {
+        return clientService.retrieveClient(idClient);
     }
 
     @Operation(summary = "Ajouter un client",
             description = "Crée un client. L'identifiant est généré automatiquement : ne pas le fournir.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Élément créé",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Client.class))),
-            @ApiResponse(responseCode = "400", description = "Corps de requête invalide",
-                    content = @Content)
+            @ApiResponse(responseCode = "201", description = ApiDocs.CREE,
+                    content = @Content(mediaType = ApiDocs.JSON,
+                            schema = @Schema(implementation = ClientResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = ApiDocs.CORPS_INVALIDE, content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Client> addClient(@RequestBody Client client) {
+    public ResponseEntity<ClientResponseDTO> addClient(@Valid @RequestBody ClientRequestDTO client) {
         return ResponseEntity.status(HttpStatus.CREATED).body(clientService.addClient(client));
     }
 
     @Operation(summary = "Ajouter plusieurs clients",
             description = "Crée plusieurs clients en une seule requête.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Éléments créés",
-                    content = @Content(mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = Client.class)))),
-            @ApiResponse(responseCode = "400", description = "Corps de requête invalide",
-                    content = @Content)
+            @ApiResponse(responseCode = "201", description = ApiDocs.CREES,
+                    content = @Content(mediaType = ApiDocs.JSON,
+                            array = @ArraySchema(schema = @Schema(implementation = ClientResponseDTO.class)))),
+            @ApiResponse(responseCode = "400", description = ApiDocs.CORPS_INVALIDE, content = @Content)
     })
     @PostMapping("/batch")
-    public ResponseEntity<List<Client>> addClients(@RequestBody List<Client> clients) {
+    public ResponseEntity<List<ClientResponseDTO>> addClients(
+            @RequestBody List<@Valid ClientRequestDTO> clients) {
         return ResponseEntity.status(HttpStatus.CREATED).body(clientService.addClients(clients));
     }
 
     @Operation(summary = "Modifier un client",
-            description = "Met à jour un client existant. L'identifiant doit être présent dans le corps de la requête.")
+            description = "Met à jour le client dont l'identifiant est passé dans l'URL.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Élément modifié",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Client.class))),
-            @ApiResponse(responseCode = "404", description = "Identifiant absent ou inexistant",
-                    content = @Content)
+            @ApiResponse(responseCode = "200", description = ApiDocs.MODIFIE,
+                    content = @Content(mediaType = ApiDocs.JSON,
+                            schema = @Schema(implementation = ClientResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = ApiDocs.CORPS_INVALIDE, content = @Content),
+            @ApiResponse(responseCode = "404", description = ApiDocs.NON_TROUVE, content = @Content)
     })
-    @PutMapping
-    public ResponseEntity<Client> updateClient(@RequestBody Client client) {
-        if (client.getIdClient() == null || clientService.retrieveClient(client.getIdClient()) == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(clientService.updateClient(client));
+    @PutMapping("/{idClient}")
+    public ClientResponseDTO updateClient(
+            @Parameter(description = ApiDocs.ID_CLIENT, example = "1") @PathVariable Long idClient,
+            @Valid @RequestBody ClientRequestDTO client) {
+        return clientService.updateClient(idClient, client);
     }
 
     @Operation(summary = "Supprimer un client",
             description = "Supprime un client à partir de son identifiant.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Élément supprimé", content = @Content),
-            @ApiResponse(responseCode = "409",
-                    description = "Suppression impossible : élément encore référencé par d'autres données",
-                    content = @Content)
+            @ApiResponse(responseCode = "204", description = ApiDocs.SUPPRIME, content = @Content),
+            @ApiResponse(responseCode = "404", description = ApiDocs.NON_TROUVE, content = @Content),
+            @ApiResponse(responseCode = "409", description = ApiDocs.CONFLIT, content = @Content)
     })
     @DeleteMapping("/{idClient}")
     public ResponseEntity<Void> removeClient(
-            @Parameter(description = "Identifiant d'un client à supprimer", example = "1") @PathVariable Long idClient) {
+            @Parameter(description = ApiDocs.ID_CLIENT, example = "1") @PathVariable Long idClient) {
         clientService.removeClient(idClient);
         return ResponseEntity.noContent().build();
     }
